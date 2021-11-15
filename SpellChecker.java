@@ -5,41 +5,34 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+
 public class SpellChecker {
-	private ArrayList<String> dictionary;
-	private ArrayList<String> inputFile;
+	private String dictionaryName;
 	private String outputName;
 
 	public SpellChecker() {
-		// TODO: You can modify the body of this constructor,
-		// or you can leave it blank. You must keep the signature, however.
 	}
 
-	public void receiveDictionary() {
+	public FileInputStream receiveDictionary() {
 		boolean waitingForDict = true;
 		while (waitingForDict) {
 			try {
 				System.out.printf(Util.DICTIONARY_PROMPT);
 				Scanner scnr = new Scanner(System.in);
-				String dictionary = scnr.next();
-				FileInputStream dictionaryStream = new FileInputStream(dictionary);
-				// put dictionary into an array
-				// wanted this to be its own method
-				// so originally thought to return FileInputStream
-				Scanner dictionaryScanner = new Scanner(dictionaryStream);
-				while (dictionaryScanner.hasNext()) {
-					this.dictionary.add(dictionaryScanner.next());
-				}
+				this.dictionaryName = scnr.next();
+				FileInputStream dictionaryStream = new FileInputStream(this.dictionaryName);
 				waitingForDict = false;
-				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, dictionary);
+				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, this.dictionaryName);
+				return dictionaryStream;
 				// any other exceptions to catch?
 			} catch (FileNotFoundException e) {
-				System.out.println(Util.FILE_OPENING_ERROR);
+				System.out.printf(Util.FILE_OPENING_ERROR);
 			}
 		}
+		return null;
 	}
 
-	public void receiveFile() {
+	public FileInputStream receiveFile() {
 		boolean waitingForFile = true;
 		while (waitingForFile) {
 			try {
@@ -47,70 +40,99 @@ public class SpellChecker {
 				Scanner scnr = new Scanner(System.in);
 				String file = scnr.next();
 				FileInputStream fileStream = new FileInputStream(file);
-				Scanner fileScanner = new Scanner(fileStream);
-				while (fileScanner.hasNext()) {
-					this.inputFile.add(fileScanner.next());
-				}
 				waitingForFile = false;
 				this.outputName = file.substring(0, file.length() - 4).concat("_chk.txt");
 				System.out.printf(Util.FILE_SUCCESS_NOTIFICATION, file, this.outputName);
+				return fileStream;
 			} catch (FileNotFoundException e) {
 				System.out.printf(Util.FILE_OPENING_ERROR);
 			}
 		}
+		return null;
 	}
 
-	public boolean checkSpelling(String currentWord) {
+	public boolean isMisspelled(String currentWord, FileInputStream dictionaryStream) {
 		boolean notAWord = true;
-		for (int i = 0; i < this.dictionary.size(); i++) {
-			if (currentWord == this.dictionary.get(i)) {
+		Scanner dictionaryScanner = new Scanner(dictionaryStream);
+		while (dictionaryScanner.hasNext()) {
+			if (currentWord == dictionaryScanner.next()) {
 				notAWord = false;
 			}
 		}
+		dictionaryScanner.close();
 		return notAWord;
 
 	}
 
-	public static String replaceWord(String currentWord) {
-		System.out.printf(Util.MISSPELL_NOTIFICATION, currentWord);
-		System.out.printf(Util.THREE_OPTION_PROMPT);
+	// takes in the misspelled word and modifies it based on user's choice
+	public String modifyWord(String misspelledWord) {
+		// lists suggestions, if any
+		System.out.printf(Util.MISSPELL_NOTIFICATION, misspelledWord);
+		WordRecommender wordRec = new WordRecommender(this.dictionaryName);
+		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
+		System.out.printf(Util.FOLLOWING_SUGGESTIONS);
+		for (int i = 0; i < suggestions.size(); i++) {
+			System.out.printf(Util.SUGGESTION_ENTRY, i, suggestions.get(i));
+		}
 		// takes in user choice, noValidChoice ends while loop when valid choice is made
 		Scanner choiceScanner = new Scanner(System.in);
 		String optionChosen = choiceScanner.next();
 		boolean noValidChoice = true;
 		while (noValidChoice) {
+			// print 2 option or 3 option prompt
+			if (suggestions.size() == 0) {
+				System.out.printf(Util.NO_SUGGESTIONS);
+				System.out.printf(Util.TWO_OPTION_PROMPT);
+			} else {
+				System.out.printf(Util.THREE_OPTION_PROMPT);
+			}
+			// user chooses to choose a suggestion, leave as is, or manually enter a
+			// replacement
 			if (optionChosen.equals("r")) {
-				// word recommender here!!
 				System.out.printf(Util.AUTOMATIC_REPLACEMENT_PROMPT);
-				int suggestionChosen = choiceScanner.nextInt();
+				int suggestionChosen = suggestions.size();
+				while (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
+					suggestionChosen = choiceScanner.nextInt();
+					if (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
+						System.out.printf(Util.INVALID_RESPONSE);
+					}
+				}
+				misspelledWord = suggestions.get(suggestionChosen);
 				noValidChoice = false;
 			} else if (optionChosen.equals("a")) {
 				noValidChoice = false;
 			} else if (optionChosen.equals("t")) {
 				System.out.printf(Util.MANUAL_REPLACEMENT_PROMPT);
-				currentWord = choiceScanner.next();
+				misspelledWord = choiceScanner.next();
 				noValidChoice = false;
 			} else {
 				System.out.printf(Util.INVALID_RESPONSE);
 			}
 		}
-		return currentWord;
+		// return the updated word
+		return misspelledWord;
 	}
 
-	public void createOutput() throws FileNotFoundException {
-		FileOutputStream os = new FileOutputStream(this.outputName);
-		PrintWriter out = new PrintWriter(os);
-		for (int i = 0; i < this.inputFile.size(); i++) {
-			String currentWord = this.inputFile.get(i);
-			if (checkSpelling(currentWord)) {
-				currentWord = replaceWord(currentWord);
+	public void start() {
+		FileInputStream dictionaryStream = receiveDictionary();
+		FileInputStream inputFileStream = receiveFile();
+		FileOutputStream os;
+		try {
+			os = new FileOutputStream(this.outputName);
+			PrintWriter out = new PrintWriter(os);
+			Scanner fileScanner = new Scanner(inputFileStream);
+			while (fileScanner.hasNext()) {
+				String currentWord = fileScanner.next();
+				if (isMisspelled(currentWord, dictionaryStream)) {
+					currentWord = modifyWord(currentWord);
+				}
+				out.print(currentWord + " ");
 			}
-			out.print(currentWord + " ");
+			fileScanner.close();
+			out.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
-	}
-
-	public static void start() {
-
 	}
 
 }
