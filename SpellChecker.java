@@ -5,9 +5,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-
 public class SpellChecker {
-	private String dictionaryName;
+	private String dictionary;
 	private String outputName;
 
 	public SpellChecker() {
@@ -19,10 +18,10 @@ public class SpellChecker {
 			try {
 				System.out.printf(Util.DICTIONARY_PROMPT);
 				Scanner scnr = new Scanner(System.in);
-				this.dictionaryName = scnr.next();
-				FileInputStream dictionaryStream = new FileInputStream(this.dictionaryName);
+				this.dictionary = scnr.next();
+				FileInputStream dictionaryStream = new FileInputStream(this.dictionary);
 				waitingForDict = false;
-				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, this.dictionaryName);
+				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, this.dictionary);
 				return dictionaryStream;
 				// any other exceptions to catch?
 			} catch (FileNotFoundException e) {
@@ -52,15 +51,16 @@ public class SpellChecker {
 	}
 
 	public boolean isMisspelled(String currentWord, FileInputStream dictionaryStream) {
-		boolean notAWord = true;
 		Scanner dictionaryScanner = new Scanner(dictionaryStream);
+		ArrayList<String> test = new ArrayList<String>();
 		while (dictionaryScanner.hasNext()) {
-			if (currentWord == dictionaryScanner.next()) {
-				notAWord = false;
+			String dictionaryEntry = dictionaryScanner.next();
+			if (currentWord.equals(dictionaryEntry)) {
+				return false;
 			}
 		}
 		dictionaryScanner.close();
-		return notAWord;
+		return true;
 
 	}
 
@@ -68,7 +68,7 @@ public class SpellChecker {
 	public String modifyWord(String misspelledWord) {
 		// lists suggestions, if any
 		System.out.printf(Util.MISSPELL_NOTIFICATION, misspelledWord);
-		WordRecommender wordRec = new WordRecommender(this.dictionaryName);
+		WordRecommender wordRec = new WordRecommender(this.dictionary);
 		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
 		System.out.printf(Util.FOLLOWING_SUGGESTIONS);
 		for (int i = 0; i < suggestions.size(); i++) {
