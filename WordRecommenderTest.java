@@ -70,6 +70,7 @@ public class WordRecommenderTest {
 	}
 
 	// -------- TESTING makeSetFromWord() -------- //
+
 	@Test
 	public void makeSetFromHello() {
 		HashSet<Character> testSet = new HashSet<Character>();

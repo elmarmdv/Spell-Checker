@@ -12,11 +12,12 @@ public class WordRecommender {
 	}
 
 	public double getSimilarity(String word1, String word2) {
-		// variable that will store the length of the shorter word
+		// initiate variables
 		int shorterWordLength = 0;
 		int leftSimilarity = 0;
 		int rightSimilarity = 0;
 
+		// find the length of the shorter word
 		if (word1.length() <= word2.length()) {
 			shorterWordLength = word1.length();
 		} else {
@@ -39,7 +40,7 @@ public class WordRecommender {
 	}
 
 	public ArrayList<String> getWordSuggestions(String word, int tolerance, double commonPercent, int topN)
-			throws FileNotFoundException { // CHANGE THIS!!!!!!!!!!!!!!!
+			throws FileNotFoundException {
 		ArrayList<String> suggestions = new ArrayList<String>();
 		ArrayList<Double> topSimilarities = new ArrayList<Double>();
 
@@ -103,7 +104,7 @@ public class WordRecommender {
 	}
 
 	public double calculateCommonPercent(HashSet<Character> aSet, HashSet<Character> bSet) {
-
+		// create hashsets for intersection and union
 		HashSet<Character> intersection = new HashSet<Character>();
 		HashSet<Character> union = new HashSet<Character>();
 
