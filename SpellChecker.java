@@ -6,32 +6,36 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class SpellChecker {
-	private String dictionary;
+	public String dictionary;
 	private String outputName;
 
 	public SpellChecker() {
+
 	}
 
-	public FileInputStream receiveDictionary() {
+	// receive a valid dictionary
+	public void receiveDictionary() {
+		// user will enter a string until that string is a valid dictionary
 		boolean waitingForDict = true;
 		while (waitingForDict) {
 			try {
 				System.out.printf(Util.DICTIONARY_PROMPT);
 				Scanner scnr = new Scanner(System.in);
 				this.dictionary = scnr.next();
+				// create a stream from this input to determine if it is a valid file
 				FileInputStream dictionaryStream = new FileInputStream(this.dictionary);
 				waitingForDict = false;
 				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, this.dictionary);
-				return dictionaryStream;
-				// any other exceptions to catch?
 			} catch (FileNotFoundException e) {
+				// if the file isn't found, print the following error
 				System.out.printf(Util.FILE_OPENING_ERROR);
 			}
 		}
-		return null;
 	}
 
+	// receive a valid file to be spell-checked
 	public FileInputStream receiveFile() {
+		// user will enter a string until that string is a valid dictionary
 		boolean waitingForFile = true;
 		while (waitingForFile) {
 			try {
@@ -50,9 +54,18 @@ public class SpellChecker {
 		return null;
 	}
 
-	public boolean isMisspelled(String currentWord, FileInputStream dictionaryStream) {
+	// determines if a word is misspelled
+	// returns true if it is misspelled
+	// and false if it isn't
+	public boolean isMisspelled(String currentWord) throws FileNotFoundException {
+		// ignore single-character words
+		if (currentWord.length() == 1) {
+			return false;
+		}
+		FileInputStream dictionaryStream = new FileInputStream(this.dictionary);
 		Scanner dictionaryScanner = new Scanner(dictionaryStream);
-		ArrayList<String> test = new ArrayList<String>();
+		// if the word equals any word in the dictionary, it is considered spelled
+		// correctly, and method will return false
 		while (dictionaryScanner.hasNext()) {
 			String dictionaryEntry = dictionaryScanner.next();
 			if (currentWord.equals(dictionaryEntry)) {
@@ -64,57 +77,84 @@ public class SpellChecker {
 
 	}
 
-	// takes in the misspelled word and modifies it based on user's choice
-	public String modifyWord(String misspelledWord) {
-		// lists suggestions, if any
+	// takes a misspelled word as an argument and returns how it will deal with the
+	// word
+	// based on 3 options
+	public String howToReplace(String misspelledWord) throws FileNotFoundException {
 		System.out.printf(Util.MISSPELL_NOTIFICATION, misspelledWord);
+		// creates WordRecommender object to determine if there are any suggestions
 		WordRecommender wordRec = new WordRecommender(this.dictionary);
 		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
-		System.out.printf(Util.FOLLOWING_SUGGESTIONS);
-		for (int i = 0; i < suggestions.size(); i++) {
-			System.out.printf(Util.SUGGESTION_ENTRY, i, suggestions.get(i));
-		}
+
 		// takes in user choice, noValidChoice ends while loop when valid choice is made
 		Scanner choiceScanner = new Scanner(System.in);
-		String optionChosen = choiceScanner.next();
 		boolean noValidChoice = true;
-		while (noValidChoice) {
-			// print 2 option or 3 option prompt
-			if (suggestions.size() == 0) {
-				System.out.printf(Util.NO_SUGGESTIONS);
-				System.out.printf(Util.TWO_OPTION_PROMPT);
-			} else {
-				System.out.printf(Util.THREE_OPTION_PROMPT);
-			}
-			// user chooses to choose a suggestion, leave as is, or manually enter a
-			// replacement
-			if (optionChosen.equals("r")) {
-				System.out.printf(Util.AUTOMATIC_REPLACEMENT_PROMPT);
-				int suggestionChosen = suggestions.size();
-				while (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
-					suggestionChosen = choiceScanner.nextInt();
-					if (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
-						System.out.printf(Util.INVALID_RESPONSE);
-					}
+		String optionChoice = "";
+
+		// if there are no suggestions, user will have 2 options
+		if (suggestions.size() == 0) {
+			System.out.printf(Util.NO_SUGGESTIONS);
+			System.out.printf(Util.TWO_OPTION_PROMPT);
+			while (noValidChoice) {
+				// print 2 option or 3 option prompt
+				// user chooses to choose a suggestion, leave as is, or manually enter a
+				// replacement
+				optionChoice = choiceScanner.next();
+				if (optionChoice.equals("a") || optionChoice.equals("t")) {
+					noValidChoice = false;
 				}
-				misspelledWord = suggestions.get(suggestionChosen);
-				noValidChoice = false;
-			} else if (optionChosen.equals("a")) {
-				noValidChoice = false;
-			} else if (optionChosen.equals("t")) {
-				System.out.printf(Util.MANUAL_REPLACEMENT_PROMPT);
-				misspelledWord = choiceScanner.next();
-				noValidChoice = false;
-			} else {
-				System.out.printf(Util.INVALID_RESPONSE);
 			}
+			// if there are 3 suggestions, user chooses from "a", "t", "r"
+		} else {
+			System.out.printf(Util.FOLLOWING_SUGGESTIONS);
+			for (int i = 0; i < suggestions.size(); i++) {
+				System.out.printf(Util.SUGGESTION_ENTRY, i, suggestions.get(i));
+			}
+			System.out.printf(Util.THREE_OPTION_PROMPT);
+			while (noValidChoice) {
+				optionChoice = choiceScanner.next();
+				if (optionChoice.equals("a") || optionChoice.equals("t") || optionChoice.equals("r")) {
+					noValidChoice = false;
+				}
+			}
+		}
+		return optionChoice;
+	}
+
+	// modifies the misspelled word based on the user's choice
+	public String modifyWord(String misspelledWord, String optionChoice) throws FileNotFoundException {
+		// creates WordRecommender object to get suggestions for misspelled word
+		WordRecommender wordRec = new WordRecommender(this.dictionary);
+		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
+		Scanner newWordScanner = new Scanner(System.in);
+		// if user chooses 'r', next choose one of the valid suggestions
+		if (optionChoice.equals("r")) {
+			System.out.printf(Util.AUTOMATIC_REPLACEMENT_PROMPT);
+			int suggestionChosen = suggestions.size();
+			while (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
+				suggestionChosen = newWordScanner.nextInt();
+				if (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
+					System.out.printf(Util.INVALID_RESPONSE);
+				}
+			}
+			misspelledWord = suggestions.get(suggestionChosen);
+			// if user chooses "a", misspelled word will stay the same
+		} else if (optionChoice.equals("a")) {
+			// if user chooses "t", next enter spelling
+		} else if (optionChoice.equals("t")) {
+			System.out.printf(Util.MANUAL_REPLACEMENT_PROMPT);
+			misspelledWord = newWordScanner.next();
+			// if user entered none of these, print INVALID_RESPONSE format string
+			// and try again
+		} else {
+			System.out.printf(Util.INVALID_RESPONSE);
 		}
 		// return the updated word
 		return misspelledWord;
 	}
 
 	public void start() {
-		FileInputStream dictionaryStream = receiveDictionary();
+		receiveDictionary();
 		FileInputStream inputFileStream = receiveFile();
 		FileOutputStream os;
 		try {
@@ -123,10 +163,13 @@ public class SpellChecker {
 			Scanner fileScanner = new Scanner(inputFileStream);
 			while (fileScanner.hasNext()) {
 				String currentWord = fileScanner.next();
-				if (isMisspelled(currentWord, dictionaryStream)) {
-					currentWord = modifyWord(currentWord);
+				if (isMisspelled(currentWord)) {
+					String optionChoice = howToReplace(currentWord);
+					currentWord = modifyWord(currentWord, optionChoice);
+					out.print(currentWord + " ");
+				} else {
+					out.print(currentWord + " ");
 				}
-				out.print(currentWord + " ");
 			}
 			fileScanner.close();
 			out.close();
