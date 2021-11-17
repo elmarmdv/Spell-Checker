@@ -63,4 +63,10 @@ class SpellCheckerTest {
 		assertEquals(true, testSpellChecker.isMisspelled("aaaa"));
 	}
 
+	@Test
+	void testmodifyWord() throws IOException {
+		testSpellChecker.setDictionary("engDictionary.txt");
+		assertEquals("parple", testSpellChecker.modifyWord("parple", "a"));
+	}
+
 }

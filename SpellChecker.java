@@ -39,16 +39,15 @@ public class SpellChecker {
 				while (dictionaryScanner.hasNext()) {
 					this.dictionary.add(dictionaryScanner.next());
 				}
-				// dictionaryScanner.close();
 				waitingForDict = false;
 				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, dictionaryName);
+				// create WordRecommender object
 				this.wordRec = new WordRecommender(dictionaryName);
 				dictionaryStream.close();
 			}
 		} catch (IOException e) {
 			System.out.printf(Util.FILE_OPENING_ERROR);
 		}
-		// scnr.close();
 	}
 
 	// so dictionary field can be set for testing purposes
@@ -61,6 +60,7 @@ public class SpellChecker {
 		}
 		dictionaryScanner.close();
 		dictionaryStream.close();
+		this.wordRec = new WordRecommender(dictionaryName);
 	}
 
 	// receive a valid file to be spell-checked
@@ -94,7 +94,6 @@ public class SpellChecker {
 			return false;
 		}
 		return true;
-
 	}
 
 	// takes a misspelled word as an argument and returns how it will deal with the
@@ -147,16 +146,25 @@ public class SpellChecker {
 	// modifies the misspelled word based on the user's choice
 	public String modifyWord(String misspelledWord, String optionChoice) throws FileNotFoundException {
 		// creates WordRecommender object to get suggestions for misspelled word
-		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
+		int topN = 4; // hardcoded to 4; can be changed
+
+		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, topN);
 		Scanner newWordScanner = new Scanner(System.in);
 
 		// if user chooses 'r', next choose one of the valid suggestions
 		if (optionChoice.equals("r")) {
 			System.out.printf(Util.AUTOMATIC_REPLACEMENT_PROMPT);
 			int suggestionChosen = 0;
-			while (suggestionChosen >= 5 || suggestionChosen <= 0) {
-				suggestionChosen = newWordScanner.nextInt();
-				if (suggestionChosen >= 5 || suggestionChosen <= 0) {
+			while (suggestionChosen > topN || suggestionChosen < 1) {
+				try {
+					String suggestionString = newWordScanner.next();
+					suggestionChosen = Integer.valueOf(suggestionString);
+				} catch (NumberFormatException e) {
+					// will catch the exception if user input is other than int
+					// and assign suggestionChosen to 0
+					suggestionChosen = 0;
+				}
+				if (suggestionChosen > topN || suggestionChosen < 1) {
 					System.out.printf(Util.INVALID_RESPONSE);
 				}
 			}
