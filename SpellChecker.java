@@ -26,11 +26,10 @@ public class SpellChecker {
 		boolean waitingForDict = true;
 		FileInputStream dictionaryStream = null;
 		Scanner scnr = new Scanner(System.in);
-		// catch IO exceptions, and ask user for new input if it isn't valid
-		try {
-			while (waitingForDict) {
+		while (waitingForDict) {
+			// catch IO exceptions, and ask user for new input if it isn't valid
+			try {
 				System.out.printf(Util.DICTIONARY_PROMPT);
-
 				String dictionaryName = scnr.next();
 				// create a stream from this input to determine if it is a valid file
 				dictionaryStream = new FileInputStream(dictionaryName);
@@ -44,9 +43,9 @@ public class SpellChecker {
 				// create WordRecommender object
 				this.wordRec = new WordRecommender(dictionaryName);
 				dictionaryStream.close();
+			} catch (IOException e) {
+				System.out.printf(Util.FILE_OPENING_ERROR);
 			}
-		} catch (IOException e) {
-			System.out.printf(Util.FILE_OPENING_ERROR);
 		}
 	}
 
