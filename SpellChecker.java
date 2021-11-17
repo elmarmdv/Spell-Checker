@@ -1,46 +1,76 @@
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Scanner;
 
 public class SpellChecker {
-	public String dictionary;
+	// keep track of the dictionary file's name
+	private String dictionaryName;
+	// will store every word in the dictionary file
+	private HashSet<String> dictionary;
+	// keep track of the output file's name
 	private String outputName;
+	private WordRecommender wordRec;
 
 	public SpellChecker() {
-
+		dictionary = new HashSet<String>();
 	}
 
 	// receive a valid dictionary
 	public void receiveDictionary() {
 		// user will enter a string until that string is a valid dictionary
 		boolean waitingForDict = true;
-		while (waitingForDict) {
-			try {
+		FileInputStream dictionaryStream = null;
+		Scanner scnr = new Scanner(System.in);
+		// catch IO exceptions, and ask user for new input if it isn't valid
+		try {
+			while (waitingForDict) {
 				System.out.printf(Util.DICTIONARY_PROMPT);
-				Scanner scnr = new Scanner(System.in);
-				this.dictionary = scnr.next();
+
+				String dictionaryName = scnr.next();
 				// create a stream from this input to determine if it is a valid file
-				FileInputStream dictionaryStream = new FileInputStream(this.dictionary);
+				dictionaryStream = new FileInputStream(dictionaryName);
+				Scanner dictionaryScanner = new Scanner(dictionaryStream);
+				// use scanner to put every word in dictionary into the dictionary HashSet
+				while (dictionaryScanner.hasNext()) {
+					this.dictionary.add(dictionaryScanner.next());
+				}
+				// dictionaryScanner.close();
 				waitingForDict = false;
-				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, this.dictionary);
-			} catch (FileNotFoundException e) {
-				// if the file isn't found, print the following error
-				System.out.printf(Util.FILE_OPENING_ERROR);
+				System.out.printf(Util.DICTIONARY_SUCCESS_NOTIFICATION, dictionaryName);
+				this.wordRec = new WordRecommender(dictionaryName);
+				dictionaryStream.close();
 			}
+		} catch (IOException e) {
+			System.out.printf(Util.FILE_OPENING_ERROR);
 		}
+		// scnr.close();
+	}
+
+	// so dictionary field can be set for testing purposes
+	public void setDictionary(String name) throws IOException {
+		this.dictionaryName = name;
+		FileInputStream dictionaryStream = new FileInputStream(name);
+		Scanner dictionaryScanner = new Scanner(dictionaryStream);
+		while (dictionaryScanner.hasNext()) {
+			this.dictionary.add(dictionaryScanner.next());
+		}
+		dictionaryScanner.close();
+		dictionaryStream.close();
 	}
 
 	// receive a valid file to be spell-checked
 	public FileInputStream receiveFile() {
 		// user will enter a string until that string is a valid dictionary
 		boolean waitingForFile = true;
+		Scanner scnr = new Scanner(System.in);
 		while (waitingForFile) {
 			try {
 				System.out.printf(Util.FILENAME_PROMPT);
-				Scanner scnr = new Scanner(System.in);
 				String file = scnr.next();
 				FileInputStream fileStream = new FileInputStream(file);
 				waitingForFile = false;
@@ -57,22 +87,12 @@ public class SpellChecker {
 	// determines if a word is misspelled
 	// returns true if it is misspelled
 	// and false if it isn't
-	public boolean isMisspelled(String currentWord) throws FileNotFoundException {
-		// ignore single-character words
-		if (currentWord.length() == 1) {
-			return false;
-		}
-		FileInputStream dictionaryStream = new FileInputStream(this.dictionary);
-		Scanner dictionaryScanner = new Scanner(dictionaryStream);
+	public boolean isMisspelled(String currentWord) {
 		// if the word equals any word in the dictionary, it is considered spelled
 		// correctly, and method will return false
-		while (dictionaryScanner.hasNext()) {
-			String dictionaryEntry = dictionaryScanner.next();
-			if (currentWord.equals(dictionaryEntry)) {
-				return false;
-			}
+		if (this.dictionary.contains(currentWord)) {
+			return false;
 		}
-		dictionaryScanner.close();
 		return true;
 
 	}
@@ -83,8 +103,8 @@ public class SpellChecker {
 	public String howToReplace(String misspelledWord) throws FileNotFoundException {
 		System.out.printf(Util.MISSPELL_NOTIFICATION, misspelledWord);
 		// creates WordRecommender object to determine if there are any suggestions
-		WordRecommender wordRec = new WordRecommender(this.dictionary);
-		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
+		// WordRecommender wordRec = new WordRecommender(this.dictionaryName);
+		ArrayList<String> suggestions = this.wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
 
 		// takes in user choice, noValidChoice ends while loop when valid choice is made
 		Scanner choiceScanner = new Scanner(System.in);
@@ -96,25 +116,28 @@ public class SpellChecker {
 			System.out.printf(Util.NO_SUGGESTIONS);
 			System.out.printf(Util.TWO_OPTION_PROMPT);
 			while (noValidChoice) {
-				// print 2 option or 3 option prompt
 				// user chooses to choose a suggestion, leave as is, or manually enter a
 				// replacement
 				optionChoice = choiceScanner.next();
 				if (optionChoice.equals("a") || optionChoice.equals("t")) {
 					noValidChoice = false;
+				} else {
+					System.out.printf(Util.INVALID_RESPONSE);
 				}
 			}
 			// if there are 3 suggestions, user chooses from "a", "t", "r"
 		} else {
 			System.out.printf(Util.FOLLOWING_SUGGESTIONS);
 			for (int i = 0; i < suggestions.size(); i++) {
-				System.out.printf(Util.SUGGESTION_ENTRY, i, suggestions.get(i));
+				System.out.printf(Util.SUGGESTION_ENTRY, i + 1, suggestions.get(i));
 			}
 			System.out.printf(Util.THREE_OPTION_PROMPT);
 			while (noValidChoice) {
 				optionChoice = choiceScanner.next();
 				if (optionChoice.equals("a") || optionChoice.equals("t") || optionChoice.equals("r")) {
 					noValidChoice = false;
+				} else {
+					System.out.printf(Util.INVALID_RESPONSE);
 				}
 			}
 		}
@@ -124,20 +147,20 @@ public class SpellChecker {
 	// modifies the misspelled word based on the user's choice
 	public String modifyWord(String misspelledWord, String optionChoice) throws FileNotFoundException {
 		// creates WordRecommender object to get suggestions for misspelled word
-		WordRecommender wordRec = new WordRecommender(this.dictionary);
 		ArrayList<String> suggestions = wordRec.getWordSuggestions(misspelledWord, 2, 0.5, 4);
 		Scanner newWordScanner = new Scanner(System.in);
+
 		// if user chooses 'r', next choose one of the valid suggestions
 		if (optionChoice.equals("r")) {
 			System.out.printf(Util.AUTOMATIC_REPLACEMENT_PROMPT);
-			int suggestionChosen = suggestions.size();
-			while (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
+			int suggestionChosen = 0;
+			while (suggestionChosen >= 5 || suggestionChosen <= 0) {
 				suggestionChosen = newWordScanner.nextInt();
-				if (suggestionChosen >= suggestions.size() || suggestionChosen <= 0) {
+				if (suggestionChosen >= 5 || suggestionChosen <= 0) {
 					System.out.printf(Util.INVALID_RESPONSE);
 				}
 			}
-			misspelledWord = suggestions.get(suggestionChosen);
+			misspelledWord = suggestions.get(suggestionChosen - 1);
 			// if user chooses "a", misspelled word will stay the same
 		} else if (optionChoice.equals("a")) {
 			// if user chooses "t", next enter spelling
@@ -154,6 +177,8 @@ public class SpellChecker {
 	}
 
 	public void start() {
+		// receives a valid dictionary and inputFile, and creates a FileInputStream and
+		// FileOutputStream
 		receiveDictionary();
 		FileInputStream inputFileStream = receiveFile();
 		FileOutputStream os;
@@ -161,6 +186,8 @@ public class SpellChecker {
 			os = new FileOutputStream(this.outputName);
 			PrintWriter out = new PrintWriter(os);
 			Scanner fileScanner = new Scanner(inputFileStream);
+			// while there is another word in the input file, if it is misspelled
+			// see if the user wants to modify it
 			while (fileScanner.hasNext()) {
 				String currentWord = fileScanner.next();
 				if (isMisspelled(currentWord)) {
@@ -171,10 +198,11 @@ public class SpellChecker {
 					out.print(currentWord + " ");
 				}
 			}
+			inputFileStream.close();
 			fileScanner.close();
 			out.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("Output file not found.");
 		}
 	}
 

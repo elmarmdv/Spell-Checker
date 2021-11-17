@@ -3,6 +3,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Scanner;
 
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.Test;
 class SpellCheckerTest {
 
 	private SpellChecker testSpellChecker = new SpellChecker();
-	private WordRecommender testWordRecommender = new WordRecommender("testDictionary.txt");
 
 	@Test
 	void testReceiveFiles() {
@@ -18,6 +18,7 @@ class SpellCheckerTest {
 
 		assertThrows(FileNotFoundException.class, () -> {
 			FileInputStream fs = new FileInputStream("sdjflksjdlfksjdf.fssdf");
+			fs.close();
 		});
 
 		assertEquals(Util.FILE_OPENING_ERROR, e.getMessage());
@@ -36,6 +37,8 @@ class SpellCheckerTest {
 		assertEquals("dear", scnr.next());
 		assertEquals("dreads", scnr.next());
 
+		scnr.close();
+
 	}
 
 	@Test
@@ -45,23 +48,19 @@ class SpellCheckerTest {
 
 		assertEquals("the", scnr.next());
 		assertEquals("old", scnr.next());
+		scnr.close();
 	}
 
 	@Test
-	void testIsMisspelled() throws FileNotFoundException {
-		testSpellChecker.dictionary = "testDictionary.txt";
-		assertEquals(true, testSpellChecker.isMisspelled("the"));
+	void testIsMisspelled() throws IOException {
+		testSpellChecker.setDictionary("engDictionary.txt");
+		assertEquals(false, testSpellChecker.isMisspelled("the"));
 	}
 
 	@Test
-	void testIsMisspelled2() throws FileNotFoundException {
-		testSpellChecker.dictionary = "testDictionary.txt";
-		assertEquals(false, testSpellChecker.isMisspelled("red"));
-	}
-
-	@Test
-	void testmodifyWord() throws FileNotFoundException {
-		assertEquals("purple", testSpellChecker.modifyWord("purple", "a"));
+	void testIsMisspelled2() throws IOException {
+		testSpellChecker.setDictionary("engDictionary.txt");
+		assertEquals(true, testSpellChecker.isMisspelled("aaaa"));
 	}
 
 }
