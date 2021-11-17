@@ -26,7 +26,7 @@ class SpellCheckerTest {
 
 	@Test
 	void testReceiveDictionary() throws FileNotFoundException {
-		FileInputStream dictionaryStream = new FileInputStream("testDictionary.txt");
+		FileInputStream dictionaryStream = new FileInputStream("testDictionary1.txt");
 		Scanner scnr = new Scanner(dictionaryStream);
 
 		assertEquals("red", scnr.next());

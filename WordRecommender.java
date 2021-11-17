@@ -39,6 +39,9 @@ public class WordRecommender {
 		return similarity;
 	}
 
+	// we will not handle FileNotFoundException in this method
+	// because validity of the dictionary file will be checked
+	// in SpellChecker class before calling getWordSuggestions method
 	public ArrayList<String> getWordSuggestions(String word, int tolerance, double commonPercent, int topN)
 			throws FileNotFoundException {
 		ArrayList<String> suggestions = new ArrayList<String>();
@@ -80,8 +83,11 @@ public class WordRecommender {
 					// also, remove the last element if size bigger than topN
 					if (similarity > topSimilarities.get(i)) {
 						topSimilarities.add(i, similarity);
-						suggestions.add(i, candidate);
 						topSimilarities.remove(topN);
+
+						suggestions.add(i, candidate);
+						// first check if there are already > TopN elements
+						// to avoid trying to remove inexistent element
 						if (suggestions.size() > topN)
 							suggestions.remove(topN);
 						break;
@@ -94,6 +100,7 @@ public class WordRecommender {
 		return suggestions;
 	}
 
+	// makes a set containing letters of a given word
 	public HashSet<Character> makeSetFromWord(String word) {
 		// creates a hashset of letters given a word
 		HashSet<Character> set = new HashSet<Character>();
@@ -103,6 +110,8 @@ public class WordRecommender {
 		return set;
 	}
 
+	// calculates commonPercent of two given sets containing letters
+	// of input word and candidate word
 	public double calculateCommonPercent(HashSet<Character> aSet, HashSet<Character> bSet) {
 		// create hashsets for intersection and union
 		HashSet<Character> intersection = new HashSet<Character>();
